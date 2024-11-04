@@ -149,7 +149,7 @@ def create_tables_in_db(database_name):
                 ''', (mode_of_payment, mode_of_payment))
 
             # Connection commit and close
-            st.success("Tables created successfully!")
+            # st.success("Tables created successfully!")
             conn.commit()
 
     except Exception as e:
@@ -178,6 +178,8 @@ def create_new_project(database_name):
                                (project_name, project_location))
                 conn.commit()  # Commit the changes
                 st.success("New project created successfully!")
+                st.write('Change the option to **Select Existing Project**')
+                delayed_rerun(3)
         else:
             st.error('Please enter the project name')
 
@@ -394,6 +396,13 @@ def register_date_adapter_converter():
     sqlite3.register_adapter(datetime.date, adapt_date)
     sqlite3.register_converter("DATE", convert_date)
 
+
+# Function to delay a rerun
+def delayed_rerun(delay_seconds):
+    # Wait for the specified delay time
+    sleep(delay_seconds)
+    # Rerun the app
+    st.rerun()
 
 # ----------------------------------------------------------------------------------------------------
 # Formatting data values
@@ -745,8 +754,8 @@ def purchase_amounts(project_id, database_name):
             # Display the styled DataFrame in Streamlit
             st.dataframe(styled_df, use_container_width=True)
 
-    except sqlite3.Error as err:
-        st.error(f"Database Error: {err}")
+    except sqlite3.Error:
+        st.error(f"No data available for the selected project !!")
 
 
 def create_vendor_bar_chart(project_id, db_name):

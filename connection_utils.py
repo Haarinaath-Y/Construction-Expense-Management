@@ -113,8 +113,8 @@ def upload_db_to_drive(service, db_name, file_id=None):
                 media_body=media,
                 fields='id'
             ).execute()
-            st.success(f"Database uploaded successfully! File ID: {file.get('id')}")
-            st.write(f"File metadata after creation: {file}{db_name}")
+            # st.success(f"Database shared successfully!")
+            # st.write(f"File metadata after creation: {file}{db_name}")
 
         return file.get('id')  # Return the file ID
 
@@ -133,7 +133,7 @@ def share_file_with_user(service, file_id, user_email):
             'emailAddress': user_email
         }
         service.permissions().create(fileId=file_id, body=permission).execute()
-        st.success(f"File shared successfully with {user_email}")
+        st.success(f"Database File shared successfully with {user_email}")
     except HttpError as error:
         st.error(f"An error occurred while sharing the file: {error}")
 
