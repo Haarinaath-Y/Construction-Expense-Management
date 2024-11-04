@@ -1,14 +1,14 @@
 import streamlit as st
 from connection_utils import (download_db_from_drive, upload_db_to_drive, share_file_with_user,
                               check_existing_file, establish_gdrive_connections)
-from utils import (cursor_conn, create_tables_in_db)
+from utils import (cursor_conn, create_tables_in_db, delayed_rerun)
 import Data_Entry
 
 
 from authlib.integrations.requests_client import OAuth2Session
 
-st.set_page_config(page_title="Construction Expenses Tracking App", page_icon="📚", layout="wide")
-st.title("📚 Construction Expenses Tracking App")
+st.set_page_config(page_title="Construction Expenses Management App", page_icon="📚", layout="wide")
+st.title("📚 Construction Expenses Management App")
 st.sidebar.success("Navigate yourself")
 
 # Define client ID and client secret from Google OAuth
@@ -102,21 +102,21 @@ def database_setup(service):
             result_id = upload_db_to_drive(service, db_name, None)
             st.write(f"Created new file with name: {db_name}")
             share_file_with_user(service, result_id, st.session_state['user_email'])
-            st.info('Please check your google drive in Shared With Me folder !!')
+            st.info('Please check your google drive in **Shared With Me** folder !!')
             st.session_state.db_created = True
 
     # Log to track which state the function is in
     if st.session_state['db_downloaded']:
         st.write("DB has already been downloaded this session.")
     if st.session_state['db_created']:
-        st.write("DB has already been created this session.")
+        st.write("New database has been created.")
 
     # Store service and db_name in session state for later use
     st.session_state.service = service
     st.session_state.db_name = db_name
 
     st.session_state.page = "show_main_functionality"
-    st.rerun()
+    delayed_rerun(5)
 
 
 def setup(service):
