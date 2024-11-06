@@ -16,7 +16,7 @@ def main():
                 st.subheader("Edit Project Details", divider=True)
                 edit_project(db_name)
                 st.subheader("Delete the Last Project", divider=True)
-                delete_the_last_project(db_name)
+                delete_the_project(db_name)
             try:
                 if st.session_state['project_id_selected']:
                     project_id = st.session_state['project_id_selected']
