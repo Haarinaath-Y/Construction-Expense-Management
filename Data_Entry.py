@@ -7,6 +7,7 @@ import datetime
 
 
 def purchase_entry(service, db_name, project, project_decision):
+
     # Entering into function if there are projects
     if project and project_decision == 'Select Existing Project':
         project_with_blank = ["Project Names with Project ID"] + project

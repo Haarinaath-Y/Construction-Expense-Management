@@ -184,11 +184,14 @@ def create_new_project(database_name):
             st.error('Please enter the project name')
 
 
-def delete_the_last_project(database_name):
+def delete_the_project(database_name):
     with st.form('Delete a Project'):
         project_query = "SELECT project_id || ' - ' || project_name AS project FROM projects;"
         project = fetch_data_from_db(project_query, database_name)
-        project_id_selection = st.selectbox('Select a project to delete:', project)
+        # Convert list of tuples to a list of IDs for the select box
+        project_with_blank = ["Select Project to delete"] + project
+
+        project_id_selection = st.selectbox('Select a project to delete:', project_with_blank)
         project_submission = st.form_submit_button('Delete')
         project_id_selected = project_id_selection.split(' - ')[0]
 
@@ -208,6 +211,7 @@ def delete_the_last_project(database_name):
                 st.error('Select a valid project id')
         except Exception as e:
             st.error(f'Error {e}')
+            print(f'{e}')
 
 
 def edit_project(database_name):
@@ -253,6 +257,58 @@ def edit_project(database_name):
                 st.session_state['project_updated'] = False
         else:
             st.warning("No projects found.")
+
+
+# ----------------------------------------------------------------------------------------------------
+# Delete Record Function
+# ----------------------------------------------------------------------------------------------------
+
+def delete_purchase_record(database_name, project_id):
+    # Fetch existing purchase IDs for deletion
+    purchases_query = f"SELECT purchase_id FROM purchases where project_id = {project_id}"
+    purchases = fetch_data_from_db(purchases_query, database_name)
+
+    # Convert list of tuples to a list of IDs for the select box
+    purchases_with_blank = ["Select Purchase ID to delete"] + purchases  # Flatten the list of tuples
+
+    with st.form("delete_form"):
+        purchase_id = st.selectbox("Select Purchase ID", purchases_with_blank)
+        submitted = st.form_submit_button("Delete")
+
+        if submitted and purchase_id != "Select Purchase ID to delete":
+            # Set the purchase ID in session state for confirmation
+            st.session_state.purchase_id_to_delete = purchase_id
+            st.session_state.confirm_delete = True
+
+    # Confirmation message and action
+    if st.session_state.get("confirm_delete", False):
+        st.warning(f"Are you sure you want to delete Purchase ID: {st.session_state.purchase_id_to_delete}?", icon="⚠️")
+        fetch_and_display_data(
+            f'''select * from purchases 
+            where purchase_id = {st.session_state.purchase_id_to_delete} and project_id = {project_id}''', database_name)
+
+        # Buttons for confirmation
+        if st.button("Yes, delete"):
+            try:
+                with connect_db(database_name) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM purchases WHERE purchase_id = ? and project_id = ?",
+                                   (st.session_state.purchase_id_to_delete, project_id))
+                    conn.commit()
+                    st.success(f"Purchase ID {st.session_state.purchase_id_to_delete} deleted successfully.")
+                    # Reset the session state
+                    st.session_state.confirm_delete = False
+            except sqlite3.Error as e:
+                st.error(f"An error occurred while deleting: {e}")
+
+        if st.button("No, cancel"):
+            st.info("Deletion canceled.")
+            # Reset the session state
+            st.session_state.confirm_delete = False
+
+        # Reset the form if needed after the operation
+        if not st.session_state.get("confirm_delete", False):
+            st.rerun()
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -807,52 +863,3 @@ def create_vendor_bar_chart(project_id, db_name):
         st.altair_chart(chart_with_labels, use_container_width=True)
     else:
         st.write(f"No data available for project {project_id}")
-
-
-# ----------------------------------------------------------------------------------------------------
-# Delete Record Function
-# ----------------------------------------------------------------------------------------------------
-
-def delete_purchase_record(database_name):
-    # Fetch existing purchase IDs for deletion
-    purchases_query = "SELECT purchase_id FROM purchases"
-    purchases = fetch_data_from_db(purchases_query, database_name)
-
-    # Convert list of tuples to a list of IDs for the select box
-    purchases_with_blank = ["Select Purchase ID to delete"] + purchases  # Flatten the list of tuples
-
-    with st.form("delete_form"):
-        purchase_id = st.selectbox("Select Purchase ID", purchases_with_blank)
-        submitted = st.form_submit_button("Delete")
-
-        if submitted and purchase_id != "Select Purchase ID to delete":
-            # Set the purchase ID in session state for confirmation
-            st.session_state.purchase_id_to_delete = purchase_id
-            st.session_state.confirm_delete = True
-
-    # Confirmation message and action
-    if st.session_state.get("confirm_delete", False):
-        st.warning(f"Are you sure you want to delete Purchase ID: {st.session_state.purchase_id_to_delete}?", icon="⚠️")
-        fetch_and_display_data(f'select * from purchases where purchase_id = {st.session_state.purchase_id_to_delete}', database_name)
-
-        # Buttons for confirmation
-        if st.button("Yes, delete"):
-            try:
-                with connect_db(database_name) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM purchases WHERE purchase_id = ?", (st.session_state.purchase_id_to_delete,))
-                    conn.commit()
-                    st.success(f"Purchase ID {st.session_state.purchase_id_to_delete} deleted successfully.")
-                    # Reset the session state
-                    st.session_state.confirm_delete = False
-            except sqlite3.Error as e:
-                st.error(f"An error occurred while deleting: {e}")
-
-        if st.button("No, cancel"):
-            st.info("Deletion canceled.")
-            # Reset the session state
-            st.session_state.confirm_delete = False
-
-        # Reset the form if needed after the operation
-        if not st.session_state.get("confirm_delete", False):
-            st.rerun()

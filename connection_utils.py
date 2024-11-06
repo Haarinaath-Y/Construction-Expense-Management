@@ -47,7 +47,7 @@ def establish_gdrive_connections():
 def list_files(service):
     """Lists the files in Google Drive to help verify file IDs."""
     try:
-        results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name, parents)").execute()
+        results = service.files().list(pageSize=100, fields="nextPageToken, files(id, name, parents)").execute()
         items = results.get('files', [])
         if not items:
             st.write("No files found.")
@@ -171,14 +171,14 @@ def download_db_from_drive(service, file_id, file_name):
 
 
 def delete_files_with_db_name(service, db_name):
-    try:
+    for db in db_name:
         # Search for files with the specific database name in Google Drive
-        query = f"name = '{db_name}'"
+        query = f"name = '{db}'"
         response = service.files().list(q=query, fields="files(id, name)").execute()
 
         files = response.get('files', [])
         if not files:
-            st.write(f"No files found with the name '{db_name}'.")
+            st.write(f"No files found with the name '{db}'.")
             return
 
         # Iterate over files and delete them
@@ -186,6 +186,3 @@ def delete_files_with_db_name(service, db_name):
             file_id = file['id']
             service.files().delete(fileId=file_id).execute()
             st.write(f"Deleted file: {file['name']} (ID: {file_id})")
-
-    except Exception as e:
-        st.error(f"An error occurred while deleting files: {e}")
