@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import delete_the_last_project, edit_project, delete_purchase_record, cursor_conn
+from utils import delete_the_project, edit_project, delete_purchase_record, cursor_conn
 
 st.set_page_config(
     page_title='Admin',
@@ -19,8 +19,9 @@ def main():
                 delete_the_last_project(db_name)
             try:
                 if st.session_state['project_id_selected']:
+                    project_id = st.session_state['project_id_selected']
                     st.subheader("Delete the Unwanted Purchase Entry", divider=True)
-                    delete_purchase_record(db_name)
+                    delete_purchase_record(db_name,project_id)
             except Exception as e:
                 st.warning(f"Please select the project in Home Page !!")
                 print(f'Error log: {e}')
