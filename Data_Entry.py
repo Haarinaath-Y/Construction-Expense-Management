@@ -1,5 +1,5 @@
 import streamlit as st
-from connection_utils import (upload_db_to_drive, share_file_with_user, check_existing_file, delete_files_with_db_name, list_files)
+from connection_utils import (upload_db_to_drive, share_file_with_user, check_existing_file)
 from utils import (fetch_data_from_db, register_date_adapter_converter, create_new_project, store_session_state,
                    clear_input, connect_db, delayed_rerun)
 from pandas import DataFrame
@@ -176,17 +176,6 @@ def show_main_functionality(service, db_name):
     if project:
         if ('db_downloaded' in st.session_state and st.session_state.db_downloaded) or ('db_created' in st.session_state and st.session_state.db_created):
             project_decision = st.selectbox('Select an option', ["Select Existing Project", "Create New Project"])
-
-            st.write(db_name)
-
-            if st.button('list'):
-                list_files(service)
-
-            if st.button('delete'):
-                a=['harishy.bio.db']
-                delete_files_with_db_name(service, a)
-
-
             purchase_entry(service, db_name, project, project_decision)
     else:
         st.info("Create your first project")
