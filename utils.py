@@ -83,33 +83,41 @@ def create_tables_in_db(database_name):
                     "project_id"	INTEGER,
                     "project_name"	TEXT NOT NULL,
                     "project_location"	TEXT,
+                    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    "last_updated" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY("project_id" AUTOINCREMENT)
                 );     
             ''')
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS "purchases" (
-                    "purchase_id"	INTEGER,
-                    "project_id"	INTEGER NOT NULL,
-                    "item_name"	TEXT NOT NULL,
-                    "item_qty"	REAL,
-                    "unit"	TEXT,
-                    "vendor"	TEXT NOT NULL,
-                    "stage"	TEXT NOT NULL,
-                    "category"	TEXT NOT NULL,
-                    "date"	TEXT NOT NULL,
-                    "purchase_amount"	REAL NOT NULL,
-                    "mode_of_payment"	TEXT NOT NULL,
-                    "paid_amount"	REAL,
-                    "paid_by"	TEXT,
-                    "notes"	TEXT,
-                    PRIMARY KEY("purchase_id" AUTOINCREMENT),
+                    "purchase_no" INTEGER PRIMARY KEY AUTOINCREMENT,  -- Globally unique identifier
+                    "project_id" INTEGER NOT NULL,
+                    "purchase_id" INTEGER NOT NULL,                    -- Project-specific sequential purchase number
+                    "item_name" TEXT NOT NULL,
+                    "item_qty" REAL,
+                    "unit" TEXT,
+                    "vendor" TEXT NOT NULL,
+                    "stage" TEXT NOT NULL,
+                    "category" TEXT NOT NULL,
+                    "date" TEXT NOT NULL,
+                    "purchase_amount" REAL NOT NULL,
+                    "mode_of_payment" TEXT NOT NULL,
+                    "paid_amount" REAL,
+                    "paid_by" TEXT,
+                    "notes" TEXT,
+                    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    -- Auto-populated creation timestamp
+                    
+                    -- Enforcing uniqueness of (project_id, purchase_no) for project-specific purchase numbering
+                    UNIQUE ("project_id", "purchase_id"),
+                    
+                    -- Foreign key constraint
                     CONSTRAINT "project_fk" FOREIGN KEY("project_id") REFERENCES "projects"("project_id")
                 );
             ''')
 
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS "stages" (
+                CREATE TABLE IF NOT EXISTS "stage" (
                     "stage_id"	TEXT NOT NULL,
                     "stage"	TEXT NOT NULL
                 );
@@ -129,9 +137,9 @@ def create_tables_in_db(database_name):
 
             for stage_id, stage_name in stages_to_insert:
                 cursor.execute('''
-                    INSERT INTO stages (stage_id, stage)
+                    INSERT INTO stage (stage_id, stage)
                     SELECT ?, ?
-                    WHERE NOT EXISTS (SELECT 1 FROM stages WHERE stage_id = ? OR stage = ?)
+                    WHERE NOT EXISTS (SELECT 1 FROM stage WHERE stage_id = ? OR stage = ?)
                 ''', (stage_id, stage_name, stage_id, stage_name))
 
             for category in categories_to_insert:
@@ -242,8 +250,12 @@ def edit_project(database_name):
                 # Update the project details in the database
                 cursor.execute("""
                     UPDATE projects 
-                    SET project_name = ?, project_location = ? 
-                    WHERE project_id = ?
+                    SET 
+                        project_name = ?, 
+                        project_location = ?, 
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE 
+                        project_id = ?
                 """, (new_project_name, new_project_location, selected_project_id))
                 conn.commit()
                 # Set a flag in session_state before rerunning
@@ -459,6 +471,7 @@ def delayed_rerun(delay_seconds):
     sleep(delay_seconds)
     # Rerun the app
     st.rerun()
+
 
 # ----------------------------------------------------------------------------------------------------
 # Formatting data values
@@ -676,7 +689,7 @@ def purchase_amounts(project_id, database_name):
             categories = cursor.fetchall()
 
             # Fetch distinct stages from the stages table
-            cursor.execute("SELECT stage FROM stages")
+            cursor.execute("SELECT stage FROM stage")
             stages = cursor.fetchall()
 
             # Check if categories or stages exist

@@ -1,7 +1,7 @@
 import streamlit as st
 from connection_utils import (upload_db_to_drive, share_file_with_user, check_existing_file)
 from utils import (fetch_data_from_db, register_date_adapter_converter, create_new_project, store_session_state,
-                   clear_input, connect_db)
+                   clear_input, connect_db, delayed_rerun)
 from pandas import DataFrame
 import datetime
 
@@ -24,7 +24,7 @@ def purchase_entry(service, db_name, project, project_decision):
 
             categories = fetch_data_from_db('SELECT category FROM category', db_name)
             payment_options = fetch_data_from_db('SELECT mode_of_payment FROM mode_of_payment', db_name)
-            stage_options = fetch_data_from_db('SELECT stage FROM stages', db_name)
+            stage_options = fetch_data_from_db('SELECT stage FROM stage', db_name)
             existing_vendors = fetch_data_from_db('SELECT distinct vendor FROM purchases', db_name)
 
             st.header("🧾 Purchase Data Entry Form", divider=True)
@@ -100,14 +100,22 @@ def purchase_entry(service, db_name, project, project_decision):
                 if submit_enabled:
                     with connect_db(db_name) as conn:
                         cursor = conn.cursor()
+
+                        # Get the next purchase_no for the given project_id
+                        next_purchase_id = cursor.execute('''
+                            SELECT COALESCE(MAX(purchase_id), 0) + 1
+                            FROM purchases
+                            WHERE project_id = ?
+                        ''', (project_id,)).fetchone()[0]
+
                         cursor.execute('''INSERT INTO purchases 
-                                            (project_id, item_name, item_qty, unit, vendor, stage, category, date, 
-                                            purchase_amount, mode_of_payment, paid_amount, paid_by, notes)
-                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                                       (project_id, item_name, item_qty, unit, vendor, stage, category, date,
+                                            (project_id, purchase_id, item_name, item_qty, unit, vendor, stage, category,
+                                            date, purchase_amount, mode_of_payment, paid_amount, paid_by, notes)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                       (project_id, next_purchase_id, item_name, item_qty, unit, vendor, stage, category, date,
                                         purchase_amount, mode_of_payment, paid_amount, paid_by, notes))
                         conn.commit()
-                        st.success("Data submitted successfully!")
+                        st.success("Purchase added successfully!")
                 else:
                     st.error("All fields are mandatory! Please fill in all fields.")
 
@@ -142,7 +150,7 @@ def purchase_entry(service, db_name, project, project_decision):
                     results_df = DataFrame(data, columns=[desc[0] for desc in cursor.description])
                     st.dataframe(results_df)
                 else:
-                    st.write("No data found for the selected criteria.")
+                    st.write("No purchases data found in this project")
 
             if st.button("Save", icon=':material/save:'):
                 existing_file_id = check_existing_file(service, db_name)
@@ -150,7 +158,7 @@ def purchase_entry(service, db_name, project, project_decision):
                     result_id = upload_db_to_drive(service, db_name, existing_file_id)
                     st.success(f"Updated the file with ID: {db_name}")
                     share_file_with_user(service, result_id, st.session_state['user_email'])
-                    st.rerun()
+                    delayed_rerun(3)
                 else:
                     st.write('Error while saving the file')
     else:
@@ -169,7 +177,6 @@ def show_main_functionality(service, db_name):
         if ('db_downloaded' in st.session_state and st.session_state.db_downloaded) or ('db_created' in st.session_state and st.session_state.db_created):
             project_decision = st.selectbox('Select an option', ["Select Existing Project", "Create New Project"])
             purchase_entry(service, db_name, project, project_decision)
-
     else:
         st.info("Create your first project")
         create_new_project(db_name)
