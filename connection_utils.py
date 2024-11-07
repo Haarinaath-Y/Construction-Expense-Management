@@ -1,4 +1,5 @@
 import io
+import os
 import streamlit as st
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -174,6 +175,8 @@ def delete_files_with_db_name(service, db_name):
     for db in db_name:
         # Search for files with the specific database name in Google Drive
         query = f"name = '{db}'"
+        if os.path.exists(db):
+            os.remove(db)
         response = service.files().list(q=query, fields="files(id, name)").execute()
 
         files = response.get('files', [])
