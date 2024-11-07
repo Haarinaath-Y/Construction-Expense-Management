@@ -25,12 +25,16 @@ def reports():
         if st.session_state['project_selection']:
             conn, cursor, db_name = cursor_conn()
             st.success(f"You're now able to access the project: **{st.session_state['project_selection']}**")
+
+            # Expenditure by Category based on stages
             st.header("Construction Expenses")
             purchase_amounts(st.session_state['project_id_selected'], db_name)
 
+            # Pay to Person Chart
             st.subheader('Pay to Person', divider=True)
             create_vendor_bar_chart(st.session_state['project_id_selected'], db_name)
 
+            # Purchase Data by Each column
             st.subheader('Purchase Data by Column', divider=True)
 
             # Requested column names
@@ -43,9 +47,15 @@ def reports():
             selected_column = st.selectbox("Select the column:", column_names_title_case)
             formatted_column = str(selected_column).replace(" ", "_")
 
-            column_data = fetch_data_from_db(
-                f'''select distinct trim(lower({formatted_column})) as columns from purchases''', db_name)
-            column_data_title_case = to_title_case(column_data)
+            if formatted_column == 'Vendor':
+                column_data = fetch_data_from_db(
+                    f'''select distinct trim(lower({formatted_column})) as columns 
+                    from purchases where project_id = {st.session_state['project_id_selected']}''', db_name)
+                column_data_title_case = to_title_case(column_data)
+            else:
+                column_data = fetch_data_from_db(
+                    f'''select {formatted_column} from {formatted_column}''', db_name)
+                column_data_title_case = to_title_case(column_data)
 
             # Convert each value to title case
             item_name = st.selectbox("Select the item name:", column_data_title_case)
@@ -107,7 +117,7 @@ def reports():
                         ELSE COALESCE(SUM(p.purchase_amount), 0) - COALESCE(SUM(p.paid_amount), 0)
                         END AS "Difference"
                     FROM 
-                        stages s
+                        stage s
                     LEFT JOIN 
                         purchases p ON p.stage = s.stage 
                         AND p.project_id = {st.session_state['project_id_selected']}
