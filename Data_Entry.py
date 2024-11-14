@@ -48,7 +48,8 @@ def purchase_entry(service, db_name, project, project_decision):
 
                 # Second column: Item quantity input
                 with col2:
-                    unit = st.selectbox("Select unit:", ["Nos", "MT", "Liters", "Units", "Kg", "Others"], key='unit', index=None,
+                    unit = st.selectbox("Select unit:", ["Nos", "MT", "Liters", "Units", "Kg", "CFT", "Others"],
+                                        key='unit', index=None,
                                         placeholder='Please choose a unit if applicable')
 
                 # Second column: Select box for units or item type
